@@ -224,6 +224,11 @@
   <section class="gate" id="gate">
     <h2>Введите пароль</h2>
     <p>Книга хранится в зашифрованном виде. Пароль нужен один раз на этом устройстве, потом всё откроется даже без интернета.</p>
+    <div class="ios-tip" id="gateTip" style="margin:0 0 16px" hidden>
+      <b>На iPhone сначала добавьте страницу на экран «Домой»:</b> в Safari нажмите
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Поделиться"><path d="M12 15V3m0 0L8 7m4-4 4 4M6 11H5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1h-1"/></svg>
+      «Поделиться» → «На экран „Домой“». Потом откройте книгу с новой иконки и введите пароль уже там: так книга сохранится в телефоне и будет играть без интернета.
+    </div>
     <form id="gateForm" autocomplete="on">
       <input type="text" name="username" value="audiobook" autocomplete="username" hidden>
       <input type="password" id="pw" name="password" placeholder="Пароль" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false" required aria-label="Пароль">
@@ -472,13 +477,18 @@ async function refreshCached() {
   paintOffCard();
 }
 async function fetchToCache(ch, onBytes, signal) {
-  const resp = await fetch(ch.f, { cache: "no-store", signal });
-  if (!resp.ok) throw new Error("HTTP " + resp.status);
-  const reader = resp.body.getReader(); const parts = []; let got = 0;
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    parts.push(value); got += value.length; onBytes && onBytes(value.length);
+  // большие главы лежат на сервере кусками по 10 МБ (ch.parts) — склеиваем обратно
+  const urls = ch.parts && ch.parts.length ? ch.parts : [ch.f];
+  const parts = []; let got = 0;
+  for (const u of urls) {
+    const resp = await fetch(u, { cache: "no-store", signal });
+    if (!resp.ok) throw new Error("HTTP " + resp.status);
+    const reader = resp.body.getReader();
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      parts.push(value); got += value.length; onBytes && onBytes(value.length);
+    }
   }
   if (got !== ch.size) throw new Error("Файл скачался не полностью");
   const cache = await caches.open(AUDIO_CACHE);
@@ -722,6 +732,7 @@ if ("mediaSession" in navigator) {
   } catch (e) {
     if (/связи/.test(e.message || "")) { $("gateMsg").className = "msg bad"; $("gateMsg").textContent = e.message; }
   }
+  $("gateTip").hidden = !(isIOS && !standalone);
   $("gate").hidden = false;
 })();
 </script>

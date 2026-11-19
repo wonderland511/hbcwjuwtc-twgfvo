@@ -1,6 +1,6 @@
 // Service worker: оболочка страницы работает офлайн.
 // Главы (a/*.bin) страница сама кладёт в кэш «audio-v1»; здесь их только отдаём из кэша.
-const SHELL = "shell-v1";
+const SHELL = "shell-v2";
 const FILES = ["./", "index.html", "m.bin", "app.webmanifest", "motion.js", "cat.jpg",
                "icon-180.png", "icon-192.png", "icon-512.png"];
 
