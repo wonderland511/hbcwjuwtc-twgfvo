@@ -1,0 +1,748 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex">
+<meta name="googlebot" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<title>Геймифицируй это — аудиокнига</title>
+<link rel="manifest" href="app.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Геймифицируй">
+<meta name="theme-color" content="#111110" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f5f4f0" media="(prefers-color-scheme: light)">
+<style>
+  :root {
+    --bg: #111110; --surface: #1c1c1b; --surface-2: #262624;
+    --text: #f5f5f7; --muted: #a1a1a6; --line: rgba(255,255,255,.08);
+    --accent: #fb923c; --accent-soft: rgba(251,146,60,.14); --accent-text: #1a0d05;
+    --ok: #4ade80; --danger: #f87171;
+    --track: rgba(255,255,255,.14);
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.35);
+    --bar-bg: rgba(28,28,27,.84);
+    color-scheme: dark;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f5f4f0; --surface: #ffffff; --surface-2: #efede7;
+      --text: #1d1d1f; --muted: #6e6e73; --line: rgba(0,0,0,.08);
+      --accent: #c2410c; --accent-soft: rgba(194,65,12,.10); --accent-text: #ffffff;
+      --ok: #15803d; --danger: #dc2626;
+      --track: rgba(0,0,0,.10);
+      --shadow: 0 1px 2px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.06);
+      --bar-bg: rgba(255,255,255,.84);
+      color-scheme: light;
+    }
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.45; -webkit-font-smoothing: antialiased;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: calc(200px + env(safe-area-inset-bottom));
+  }
+  body.locked { padding-bottom: 40px; }
+  button, input { font: inherit; color: inherit; }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 0 16px; }
+  [hidden] { display: none !important; }
+
+  /* появление — только CSS, без JS */
+  @keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: no-preference) {
+    .hero, .card, .list-head, .chapters li, .gate { animation: rise .5s cubic-bezier(.22,1,.36,1) both; }
+    .card { animation-delay: .06s; } .list-head { animation-delay: .1s; }
+    .chapters li { animation-delay: calc(.12s + var(--i, 0) * .025s); }
+  }
+
+  /* ---------- Шапка ---------- */
+  header.hero { display: flex; gap: 22px; align-items: center; padding: 40px 0 26px; }
+  .cover {
+    flex: none; width: 120px; height: 120px; border-radius: 26px; overflow: hidden;
+    box-shadow: var(--shadow);
+  }
+  .cover img { width: 100%; height: 100%; display: block; }
+  .kicker { font-size: 13px; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); font-weight: 600; margin: 0 0 6px; }
+  .hero h1 { font-size: clamp(28px, 6vw, 38px); line-height: 1.1; margin: 0 0 8px; letter-spacing: -.02em; }
+  .hero .sub { color: var(--muted); margin: 0; font-size: 15px; }
+  .hero .meta { color: var(--muted); font-size: 14px; margin: 10px 0 0; }
+  @media (max-width: 520px) {
+    header.hero { flex-direction: column; align-items: flex-start; gap: 16px; padding-top: 24px; }
+    .cover { width: 92px; height: 92px; border-radius: 22px; }
+  }
+
+  /* ---------- Пароль ---------- */
+  .gate { background: var(--surface); border-radius: 22px; box-shadow: var(--shadow); padding: 24px 20px; margin-top: 8px; }
+  .gate h2 { margin: 0 0 6px; font-size: 20px; letter-spacing: -.01em; }
+  .gate p { margin: 0 0 16px; color: var(--muted); font-size: 15px; }
+  .gate form { display: flex; gap: 10px; flex-wrap: wrap; }
+  .gate input[type=password] {
+    flex: 1 1 220px; min-height: 52px; border-radius: 14px; border: 1px solid var(--line);
+    background: var(--surface-2); padding: 0 16px; font-size: 17px; outline: none;
+  }
+  .gate input[type=password]:focus-visible { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .pill {
+    min-height: 52px; padding: 0 22px; border-radius: 14px; border: 0; cursor: pointer;
+    background: var(--accent); color: var(--accent-text); font-weight: 600; font-size: 16px;
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    transition: filter .2s ease, opacity .2s ease;
+  }
+  .pill:hover { filter: brightness(1.06); }
+  .pill:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  .pill:disabled { opacity: .55; cursor: default; }
+  .pill.ghost { background: var(--surface-2); color: var(--text); }
+  .gate .msg { margin: 12px 0 0; font-size: 14px; min-height: 20px; }
+  .msg.bad { color: var(--danger); }
+
+  /* ---------- Офлайн-карточка ---------- */
+  .card { background: var(--surface); border-radius: 22px; box-shadow: var(--shadow); padding: 18px; margin: 0 0 22px; }
+  .card .row { display: flex; gap: 14px; align-items: center; }
+  .card .ico { flex: none; width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); }
+  .card .ico svg { width: 24px; height: 24px; }
+  .card.done .ico { background: color-mix(in srgb, var(--ok) 16%, transparent); color: var(--ok); }
+  .card h3 { margin: 0; font-size: 16.5px; }
+  .card .hint { margin: 2px 0 0; color: var(--muted); font-size: 14px; }
+  .card .actions { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+  .card .actions .pill { flex: 1 1 auto; }
+  .bar { height: 6px; border-radius: 3px; background: var(--track); overflow: hidden; margin-top: 14px; }
+  .bar i { display: block; height: 100%; width: 0; background: var(--accent); border-radius: 3px; transition: width .3s ease; }
+  .ios-tip { margin-top: 14px; padding: 12px 14px; border-radius: 14px; background: var(--surface-2); font-size: 14px; color: var(--muted); }
+  .ios-tip b { color: var(--text); }
+  .ios-tip svg { width: 16px; height: 16px; vertical-align: -3px; }
+
+  /* ---------- Список глав ---------- */
+  .list-head { display: flex; align-items: flex-end; justify-content: space-between; margin: 0 4px 10px; gap: 12px; }
+  .list-title { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 4px; font-weight: 600; }
+  .sticker {
+    width: 104px; height: 104px; border-radius: 50%; object-fit: cover; flex: none;
+    border: 4px solid #fff; box-shadow: var(--shadow); transform: rotate(-6deg);
+    margin-bottom: -14px; position: relative; z-index: 1; pointer-events: auto;
+  }
+  ol.chapters { list-style: none; margin: 0; padding: 6px; background: var(--surface); border-radius: 22px; box-shadow: var(--shadow); }
+  .ch {
+    width: 100%; display: grid; grid-template-columns: 40px 1fr auto; gap: 12px; align-items: center;
+    text-align: left; background: transparent; border: 0; border-radius: 16px;
+    padding: 12px; cursor: pointer; min-height: 64px; transition: background-color .2s ease;
+  }
+  .ch:hover { background: var(--surface-2); }
+  .ch:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .ch.current { background: var(--accent-soft); }
+  .ch .num {
+    width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center;
+    font-size: 14px; font-weight: 600; color: var(--muted); background: var(--surface-2); font-variant-numeric: tabular-nums;
+  }
+  .ch.current .num { background: var(--accent); color: var(--accent-text); }
+  .ch.done:not(.current) .num { color: var(--accent); }
+  .ch .body { min-width: 0; }
+  .ch .label { font-size: 12px; color: var(--muted); display: block; margin-bottom: 1px; }
+  .ch .name { font-size: 15.5px; font-weight: 500; display: block; overflow-wrap: anywhere; }
+  .ch.current .name { color: var(--accent); font-weight: 600; }
+  .ch .prog { display: block; height: 3px; border-radius: 2px; background: var(--track); margin-top: 7px; overflow: hidden; }
+  .ch .prog i { display: block; height: 100%; width: 0; background: var(--accent); border-radius: 2px; }
+  .ch .side { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+  .ch .dur { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .ch .off { width: 16px; height: 16px; color: var(--muted); opacity: .45; }
+  .ch.cached .off { color: var(--ok); opacity: 1; }
+  .eq { display: none; gap: 2px; align-items: flex-end; height: 14px; }
+  .eq b { width: 3px; background: var(--accent-text); border-radius: 1px; height: 40%; }
+  .ch.current.playing .num > span:first-child { display: none; }
+  .ch.current.playing .eq { display: flex; }
+  .ch.current.playing .eq b { animation: eq .9s ease-in-out infinite; }
+  .ch.current.playing .eq b:nth-child(2) { animation-delay: -.3s; }
+  .ch.current.playing .eq b:nth-child(3) { animation-delay: -.6s; }
+  @keyframes eq { 0%,100% { height: 30%; } 50% { height: 100%; } }
+  .spin { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--accent-text); border-right-color: transparent; display: none; }
+  .ch.current.busy .num > span { display: none !important; }
+  .ch.current.busy .spin { display: block; animation: rot .8s linear infinite; }
+  @keyframes rot { to { transform: rotate(360deg); } }
+
+  footer.foot { color: var(--muted); font-size: 13px; text-align: center; margin: 22px 0 0; }
+  footer.foot a, .linkbtn { color: var(--muted); }
+  .linkbtn { background: none; border: 0; padding: 8px; cursor: pointer; text-decoration: underline; font-size: 13px; }
+
+  /* ---------- Плеер ---------- */
+  .player {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; background: var(--bar-bg);
+    -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px);
+    border-top: 1px solid var(--line); padding: 12px 0 calc(14px + env(safe-area-inset-bottom));
+  }
+  .now { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; margin-bottom: 6px; }
+  .now .t { font-weight: 600; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .now .c { font-size: 12px; color: var(--muted); white-space: nowrap; }
+  .seek { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 28px; background: transparent; cursor: pointer; margin: 0; --p: 0%; }
+  input[type=range]::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: linear-gradient(to right, var(--accent) var(--p), var(--track) var(--p)); }
+  input[type=range]::-moz-range-track { height: 4px; border-radius: 2px; background: var(--track); }
+  input[type=range]::-moz-range-progress { height: 4px; border-radius: 2px; background: var(--accent); }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: var(--accent); margin-top: -6px; border: 0; }
+  input[type=range]::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; background: var(--accent); border: 0; }
+  .controls { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 4px; position: relative; }
+  .btn {
+    width: 48px; height: 48px; border-radius: 50%; border: 0; background: transparent; cursor: pointer;
+    display: grid; place-items: center; color: var(--text); position: relative; transition: background-color .2s ease;
+  }
+  .btn:hover { background: var(--surface-2); }
+  .btn:focus-visible, .speed:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .btn svg { width: 24px; height: 24px; fill: currentColor; }
+  .btn .sec { position: absolute; font-size: 9px; font-weight: 700; top: 50%; left: 50%; }
+  .btn.play { width: 60px; height: 60px; background: var(--accent); color: var(--accent-text); }
+  .btn.play:hover { background: var(--accent); filter: brightness(1.06); }
+  .btn.play svg { width: 30px; height: 30px; }
+  .btn:disabled { opacity: .35; cursor: default; }
+  .speed {
+    position: absolute; right: 0; top: 50%; transform: translateY(-50%);
+    border: 1px solid var(--line); background: var(--surface); border-radius: 999px;
+    padding: 6px 12px; font-size: 13px; font-weight: 600; cursor: pointer; min-width: 58px; min-height: 40px; font-variant-numeric: tabular-nums;
+  }
+  .err { color: var(--danger); font-size: 13px; text-align: center; margin: 6px 0 0; }
+  @media (max-width: 520px) { .controls { justify-content: flex-start; gap: 0; } .btn { width: 46px; height: 46px; } }
+  @media (prefers-reduced-motion: reduce) {
+    .ch.current.playing .eq b { animation: none; height: 70%; }
+    * { transition: none !important; }
+  }
+</style>
+</head>
+<body class="locked">
+
+<main class="wrap">
+  <header class="hero">
+    <div class="cover" aria-hidden="true"><img src="icon-512.png" alt=""></div>
+    <div>
+      <p class="kicker">Аудиокнига · офлайн</p>
+      <h1 id="bookTitle">Аудиокнига</h1>
+      <p class="sub" id="bookSub">Откройте паролем, чтобы увидеть оглавление.</p>
+      <p class="meta" id="bookMeta"></p>
+    </div>
+  </header>
+
+  <!-- Пароль -->
+  <section class="gate" id="gate">
+    <h2>Введите пароль</h2>
+    <p>Книга хранится в зашифрованном виде. Пароль нужен один раз на этом устройстве, потом всё откроется даже без интернета.</p>
+    <form id="gateForm" autocomplete="on">
+      <input type="text" name="username" value="audiobook" autocomplete="username" hidden>
+      <input type="password" id="pw" name="password" placeholder="Пароль" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false" required aria-label="Пароль">
+      <button class="pill" id="gateBtn" type="submit">Открыть</button>
+    </form>
+    <p class="msg" id="gateMsg" role="status"></p>
+  </section>
+
+  <div id="app" hidden>
+    <!-- Офлайн -->
+    <section class="card" id="offCard" aria-live="polite">
+      <div class="row">
+        <div class="ico" aria-hidden="true">
+          <svg id="icoDl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0-5-5m5 5 5-5M5 21h14"/></svg>
+          <svg id="icoOk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" hidden><path d="M5 12.5 10 17 19 7"/></svg>
+        </div>
+        <div>
+          <h3 id="offTitle">Слушать без интернета</h3>
+          <p class="hint" id="offHint">Скачайте книгу на телефон один раз.</p>
+        </div>
+      </div>
+      <div class="bar" id="offBar" hidden><i></i></div>
+      <div class="actions">
+        <button class="pill" id="dlBtn" type="button">Скачать всю книгу</button>
+        <button class="pill ghost" id="dlStop" type="button" hidden>Остановить</button>
+      </div>
+      <div class="ios-tip" id="iosTip" hidden>
+        <b>Сначала добавьте на экран «Домой».</b> В Safari нажмите
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Поделиться"><path d="M12 15V3m0 0L8 7m4-4 4 4M6 11H5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1h-1"/></svg>
+        «Поделиться» → «На экран „Домой“», откройте книгу с иконки и скачайте там. Иконка на экране хранит данные отдельно от Safari и надёжнее держит их офлайн.
+      </div>
+    </section>
+
+    <div class="list-head">
+      <h2 class="list-title">Содержание</h2>
+      <img class="sticker" id="sticker" src="cat.jpg" width="104" height="104" alt="Милый котик читает книгу" loading="lazy" decoding="async">
+    </div>
+    <ol class="chapters" id="list"></ol>
+
+    <footer class="foot">
+      Позиция и скорость сохраняются на этом устройстве.<br>
+      Фото котика: BibBornem, CC0, <a href="https://commons.wikimedia.org/wiki/File:Cat_reading_book_498103.jpg" rel="noopener noreferrer" target="_blank">Wikimedia Commons</a><br>
+      <button class="linkbtn" id="forget" type="button">Забыть пароль на этом устройстве</button>
+      <button class="linkbtn" id="wipe" type="button">Удалить скачанные главы</button>
+    </footer>
+  </div>
+</main>
+
+<section class="player" id="player" aria-label="Плеер" hidden>
+  <div class="wrap">
+    <div class="now"><span class="t" id="nowTitle">Выберите главу</span><span class="c" id="nowCount"></span></div>
+    <div class="seek">
+      <span id="cur">0:00</span>
+      <input type="range" id="seek" min="0" max="0" step="1" value="0" aria-label="Позиция в главе">
+      <span id="dur">0:00</span>
+    </div>
+    <div class="controls">
+      <button class="btn" id="prev" aria-label="Предыдущая глава"><svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zM9.5 12 18 6v12z"/></svg></button>
+      <button class="btn" id="back" aria-label="Назад на 15 секунд"><svg viewBox="0 0 24 24"><path d="M12 5V2L7 6l5 4V7a6 6 0 1 1-6 6H4a8 8 0 1 0 8-8z"/></svg><span class="sec" style="transform:translate(-40%,-30%)">15</span></button>
+      <button class="btn play" id="play" aria-label="Воспроизвести">
+        <svg viewBox="0 0 24 24" id="icoPlay"><path d="M8 5v14l11-7z"/></svg>
+        <svg viewBox="0 0 24 24" id="icoPause" style="display:none"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>
+      </button>
+      <button class="btn" id="fwd" aria-label="Вперёд на 30 секунд"><svg viewBox="0 0 24 24"><path d="M12 5V2l5 4-5 4V7a6 6 0 1 0 6 6h2a8 8 0 1 1-8-8z"/></svg><span class="sec" style="transform:translate(-60%,-30%)">30</span></button>
+      <button class="btn" id="next" aria-label="Следующая глава"><svg viewBox="0 0 24 24"><path d="M16 6h2v12h-2zM6 6l8.5 6L6 18z"/></svg></button>
+      <button class="speed" id="speed" aria-label="Скорость воспроизведения">1×</button>
+    </div>
+    <p class="err" id="err" role="alert" hidden></p>
+  </div>
+</section>
+
+<audio id="audio" preload="auto" playsinline></audio>
+
+<noscript><p class="wrap" style="color:#f87171">Для плеера нужен включённый JavaScript.</p></noscript>
+
+<script>
+"use strict";
+const CFG = { salt: "3lQraV8BDOwJ8ZdiuIxmVQ==", iter: 600000, total: 556922352, count: 19 };
+const AUDIO_CACHE = "audio-v1";
+const KEY_LS = "gamify-offline-v1";
+const SPEEDS = [0.8, 1, 1.25, 1.5, 1.75, 2];
+const $ = (id) => document.getElementById(id);
+const audio = $("audio"), list = $("list"), seek = $("seek");
+const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+const standalone = navigator.standalone === true || matchMedia("(display-mode: standalone)").matches;
+
+let KEY = null, BOOK = null, CH = [];
+
+// ---------- service worker ----------
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+
+// ---------- IndexedDB: храним неизвлекаемый ключ (не пароль) ----------
+function idb() {
+  return new Promise((res, rej) => {
+    const r = indexedDB.open("gamify-book", 1);
+    r.onupgradeneeded = () => r.result.createObjectStore("kv");
+    r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+  });
+}
+async function kv(mode, k, v) {
+  const db = await idb();
+  return new Promise((res, rej) => {
+    const st = db.transaction("kv", mode === "get" ? "readonly" : "readwrite").objectStore("kv");
+    const r = mode === "get" ? st.get(k) : mode === "set" ? st.put(v, k) : st.delete(k);
+    r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+  });
+}
+
+// ---------- шифрование ----------
+const b64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+async function deriveKey(pw) {
+  const base = await crypto.subtle.importKey("raw", new TextEncoder().encode(pw), "PBKDF2", false, ["deriveKey"]);
+  return crypto.subtle.deriveKey({ name: "PBKDF2", salt: b64(CFG.salt), iterations: CFG.iter, hash: "SHA-256" },
+    base, { name: "AES-GCM", length: 256 }, false, ["decrypt"]);
+}
+function decrypt(key, buf) {
+  return crypto.subtle.decrypt({ name: "AES-GCM", iv: new Uint8Array(buf, 0, 12) }, key, new Uint8Array(buf, 12));
+}
+async function getManifestBuf() {
+  try { const r = await fetch("m.bin"); if (r.ok) return r.arrayBuffer(); } catch (e) {}
+  const c = await caches.match("m.bin", { ignoreSearch: true });
+  if (c) return c.arrayBuffer();
+  throw new Error("Нет связи, а оглавление ещё не сохранено на устройстве.");
+}
+async function unlockWith(key) {
+  const plain = await decrypt(key, await getManifestBuf()); // бросит ошибку при неверном пароле
+  const m = JSON.parse(new TextDecoder().decode(plain));
+  KEY = key; BOOK = m.book; CH = m.chapters;
+}
+
+// ---------- экран пароля ----------
+$("gateForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const pw = $("pw").value.trim();
+  if (!pw) return;
+  $("gateBtn").disabled = true; $("gateMsg").className = "msg"; $("gateMsg").textContent = "Проверяю…";
+  try {
+    const key = await deriveKey(pw);
+    await unlockWith(key);
+    try { await kv("set", "key", key); } catch (e2) {}
+    $("gateMsg").textContent = "";
+    startApp();
+  } catch (err) {
+    $("gateMsg").className = "msg bad";
+    $("gateMsg").textContent = /связи/.test(err.message) ? err.message : "Неверный пароль. Проверьте раскладку и попробуйте ещё раз.";
+  } finally { $("gateBtn").disabled = false; }
+});
+$("forget").addEventListener("click", async () => {
+  if (!confirm("Забыть пароль на этом устройстве? Скачанные главы останутся, но для входа снова понадобится пароль.")) return;
+  try { await kv("del", "key"); } catch (e) {}
+  location.reload();
+});
+
+// ---------- состояние ----------
+function loadState() { try { return JSON.parse(localStorage.getItem(KEY_LS)) || {}; } catch (e) { return {}; } }
+const state = Object.assign({ current: null, progress: {}, speed: 1 }, loadState());
+function saveState() { try { localStorage.setItem(KEY_LS, JSON.stringify(state)); } catch (e) {} }
+
+function fmt(s) {
+  s = Math.max(0, Math.floor(s || 0));
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+  return h ? `${h}:${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}` : `${m}:${String(sec).padStart(2, "0")}`;
+}
+const mb = (b) => Math.round(b / 1048576);
+const fullName = (c) => (c.label ? `${c.label}. ${c.title}` : c.title);
+
+// ---------- приложение ----------
+let rows = [];
+const cachedSet = new Set();
+
+function startApp() {
+  document.body.classList.remove("locked");
+  $("gate").hidden = true; $("app").hidden = false; $("player").hidden = false;
+  $("bookTitle").textContent = BOOK.title;
+  $("bookSub").textContent = `${BOOK.sub} · ${BOOK.author}`;
+  const total = CH.reduce((a, c) => a + c.dur, 0);
+  $("bookMeta").textContent = `${CH.length} частей · ${Math.floor(total / 3600)} ч ${Math.round((total % 3600) / 60)} мин · ${mb(CFG.total)} МБ`;
+  $("iosTip").hidden = !(isIOS && !standalone);
+  renderList();
+  refreshCached();
+  if (!SPEEDS.includes(state.speed)) state.speed = 1;
+  showSpeed();
+  if (Number.isInteger(state.current) && CH[state.current]) {
+    const c = CH[state.current];
+    seek.max = Math.floor(c.dur);
+    let start = state.progress[c.f] || 0;
+    if (start >= c.dur - 3) start = 0;
+    seek.value = start; $("cur").textContent = fmt(start); $("dur").textContent = fmt(c.dur); paintSeek();
+  } else state.current = null;
+  markCurrent();
+  window.dispatchEvent(new Event("app-ready"));
+}
+
+function renderList() {
+  list.innerHTML = "";
+  rows = CH.map((c, i) => {
+    const li = document.createElement("li");
+    li.style.setProperty("--i", i);
+    const b = document.createElement("button");
+    b.className = "ch"; b.type = "button";
+    b.innerHTML = `
+      <span class="num"><span>${i === 0 ? "•" : i}</span><span class="eq" aria-hidden="true"><b></b><b></b><b></b></span><span class="spin" aria-hidden="true"></span></span>
+      <span class="body">${c.label ? `<span class="label">${c.label}</span>` : ""}<span class="name"></span><span class="prog"><i></i></span></span>
+      <span class="side"><span class="dur">${fmt(c.dur)}</span>
+        <svg class="off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.7 2.5L16 9.5"/></svg></span>`;
+    b.querySelector(".name").textContent = c.title;
+    b.addEventListener("click", () => {
+      if (state.current === i && liveIndex === i) togglePlay();
+      else { unlockAudio(); playChapter(i); }
+    });
+    li.appendChild(b); list.appendChild(li);
+    return b;
+  });
+  CH.forEach((_, i) => paintRow(i));
+}
+function paintRow(i) {
+  const c = CH[i], frac = Math.min(1, (state.progress[c.f] || 0) / c.dur);
+  rows[i].querySelector(".prog i").style.width = (frac * 100).toFixed(1) + "%";
+  rows[i].classList.toggle("done", frac >= 0.98);
+  rows[i].classList.toggle("cached", cachedSet.has(c.f));
+  rows[i].setAttribute("aria-label", `${fullName(c)}, ${fmt(c.dur)}${cachedSet.has(c.f) ? ", скачана" : ""}`);
+}
+function markCurrent() {
+  rows.forEach((r, i) => {
+    r.classList.toggle("current", i === state.current);
+    r.classList.toggle("playing", i === state.current && !audio.paused && !silent);
+    if (i === state.current) r.setAttribute("aria-current", "true"); else r.removeAttribute("aria-current");
+  });
+  const c = CH[state.current];
+  $("nowTitle").textContent = c ? fullName(c) : "Выберите главу";
+  $("nowCount").textContent = c ? `${state.current + 1} из ${CH.length}` : "";
+  $("prev").disabled = !(state.current > 0);
+  $("next").disabled = state.current === null || state.current >= CH.length - 1;
+}
+function setBusy(i, on) { rows[i] && rows[i].classList.toggle("busy", on); }
+
+// ---------- кэш глав ----------
+async function refreshCached() {
+  try {
+    const c = await caches.open(AUDIO_CACHE);
+    const keys = await c.keys();
+    cachedSet.clear();
+    for (const k of keys) { const p = new URL(k.url).pathname; const ch = CH.find((x) => p.endsWith("/" + x.f)); if (ch) cachedSet.add(ch.f); }
+  } catch (e) {}
+  CH.forEach((_, i) => paintRow(i));
+  paintOffCard();
+}
+async function fetchToCache(ch, onBytes, signal) {
+  const resp = await fetch(ch.f, { cache: "no-store", signal });
+  if (!resp.ok) throw new Error("HTTP " + resp.status);
+  const reader = resp.body.getReader(); const parts = []; let got = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    parts.push(value); got += value.length; onBytes && onBytes(value.length);
+  }
+  if (got !== ch.size) throw new Error("Файл скачался не полностью");
+  const cache = await caches.open(AUDIO_CACHE);
+  await cache.put(ch.f, new Response(new Blob(parts), { headers: { "Content-Type": "application/octet-stream" } }));
+  cachedSet.add(ch.f);
+  paintRow(CH.indexOf(ch));
+}
+
+// ---------- офлайн-карточка ----------
+let dl = null; // { ctrl, done, total }
+function paintOffCard() {
+  const n = cachedSet.size, all = n === CH.length;
+  const have = CH.filter((c) => cachedSet.has(c.f)).reduce((a, c) => a + c.size, 0);
+  $("offCard").classList.toggle("done", all && !dl);
+  $("icoOk").hidden = !(all && !dl); $("icoDl").hidden = all && !dl;
+  if (dl) {
+    const pct = Math.min(100, (dl.done / CFG.total) * 100);
+    $("offTitle").textContent = `Скачиваю… ${Math.floor(pct)}%`;
+    $("offHint").textContent = `${mb(dl.done)} из ${mb(CFG.total)} МБ · не закрывайте страницу`;
+    $("offBar").hidden = false; $("offBar").firstElementChild.style.width = pct + "%";
+    $("dlBtn").hidden = true; $("dlStop").hidden = false;
+  } else if (all) {
+    $("offTitle").textContent = "Вся книга на телефоне";
+    $("offHint").textContent = `Можно слушать без интернета · ${mb(CFG.total)} МБ`;
+    $("offBar").hidden = true; $("dlBtn").hidden = true; $("dlStop").hidden = true;
+  } else {
+    $("offTitle").textContent = n ? `Скачано ${n} из ${CH.length}` : "Слушать без интернета";
+    $("offHint").textContent = n ? `${mb(have)} из ${mb(CFG.total)} МБ. Докачайте остальное, пока есть Wi-Fi.` : `Скачайте книгу на телефон один раз (${mb(CFG.total)} МБ, лучше по Wi-Fi).`;
+    $("offBar").hidden = !n; $("offBar").firstElementChild.style.width = (have / CFG.total * 100) + "%";
+    $("dlBtn").hidden = false; $("dlStop").hidden = true;
+    $("dlBtn").textContent = n ? "Докачать остальное" : "Скачать всю книгу";
+  }
+}
+$("dlBtn").addEventListener("click", async () => {
+  if (dl) return;
+  try { if (navigator.storage && navigator.storage.persist) await navigator.storage.persist(); } catch (e) {}
+  const ctrl = new AbortController();
+  dl = { ctrl, done: CH.filter((c) => cachedSet.has(c.f)).reduce((a, c) => a + c.size, 0) };
+  paintOffCard();
+  let failed = null;
+  for (const ch of CH) {
+    if (cachedSet.has(ch.f)) continue;
+    const before = dl.done;
+    try { await fetchToCache(ch, (n) => { dl.done += n; paintOffCard(); }, ctrl.signal); }
+    catch (e) { dl.done = before; failed = e; break; }
+  }
+  dl = null;
+  await refreshCached();
+  if (failed && failed.name !== "AbortError") {
+    $("offHint").textContent = navigator.onLine === false
+      ? "Связь пропала. Нажмите «Докачать», когда появится интернет: скачанное не потеряется."
+      : (/quota/i.test(String(failed.name) + failed.message) ? "На телефоне не хватает места. Освободите память и нажмите «Докачать»." : "Загрузка прервалась. Нажмите «Докачать»: скачанное не потеряется.");
+  }
+});
+$("dlStop").addEventListener("click", () => { if (dl) dl.ctrl.abort(); });
+$("wipe").addEventListener("click", async () => {
+  if (!confirm("Удалить все скачанные главы с этого устройства? Для прослушивания понадобится интернет.")) return;
+  try { await caches.delete(AUDIO_CACHE); } catch (e) {}
+  refreshCached();
+});
+
+// ---------- воспроизведение ----------
+// iOS разрешает play() только из нажатия; расшифровка асинхронна, поэтому
+// при нажатии сразу «будим» элемент коротким беззвучным звуком.
+const SILENT = (() => {
+  const n = 800, buf = new ArrayBuffer(44 + n), v = new DataView(buf);
+  const w = (o, s) => [...s].forEach((ch, i) => v.setUint8(o + i, ch.charCodeAt(0)));
+  w(0, "RIFF"); v.setUint32(4, 36 + n, true); w(8, "WAVEfmt "); v.setUint32(16, 16, true); v.setUint16(20, 1, true);
+  v.setUint16(22, 1, true); v.setUint32(24, 8000, true); v.setUint32(28, 8000, true); v.setUint16(32, 1, true);
+  v.setUint16(34, 8, true); w(36, "data"); v.setUint32(40, n, true);
+  for (let i = 0; i < n; i++) v.setUint8(44 + i, 128);
+  return URL.createObjectURL(new Blob([buf], { type: "audio/wav" }));
+})();
+let silent = false, liveIndex = null, liveUrl = null, prepared = null, loadToken = 0, pendingSeek = null;
+
+function unlockAudio() {
+  if (liveIndex !== null && !audio.paused) return;
+  remember();
+  liveIndex = null; silent = true;
+  try { audio.src = SILENT; const p = audio.play(); if (p && p.catch) p.catch(() => {}); } catch (e) {}
+}
+
+async function getChapterUrl(i) {
+  const ch = CH[i];
+  if (prepared && prepared.i === i) { const u = prepared.url; prepared = null; return u; }
+  let r = await caches.match(ch.f, { ignoreSearch: true });
+  if (!r) {
+    if (navigator.onLine === false) throw new Error(`«${fullName(ch)}» не скачана, а интернета нет.`);
+    $("nowTitle").textContent = `Загружаю: ${fullName(ch)}…`;
+    await fetchToCache(ch, null);
+    paintOffCard();
+    r = await caches.match(ch.f, { ignoreSearch: true });
+  }
+  const plain = await decrypt(KEY, await r.arrayBuffer());
+  return URL.createObjectURL(new Blob([plain], { type: "audio/mpeg" }));
+}
+
+// заранее готовим следующую главу, чтобы переход на заблокированном экране был мгновенным
+async function prepareNext() {
+  const n = state.current + 1;
+  if (n >= CH.length || (prepared && prepared.i === n)) return;
+  if (!cachedSet.has(CH[n].f)) return;
+  try {
+    const r = await caches.match(CH[n].f, { ignoreSearch: true });
+    if (!r) return;
+    const plain = await decrypt(KEY, await r.arrayBuffer());
+    if (prepared) URL.revokeObjectURL(prepared.url);
+    prepared = { i: n, url: URL.createObjectURL(new Blob([plain], { type: "audio/mpeg" })) };
+  } catch (e) {}
+}
+
+async function playChapter(i, fromStart) {
+  const c = CH[i], token = ++loadToken;
+  let start = fromStart ? 0 : (state.progress[c.f] || 0);
+  if (start >= c.dur - 3) start = 0;
+  state.current = i; saveState();
+  hideErr(); markCurrent(); setBusy(i, true);
+  seek.max = Math.floor(c.dur); seek.value = start; $("cur").textContent = fmt(start); $("dur").textContent = fmt(c.dur); paintSeek();
+  updateMediaSession();
+  rows[i].scrollIntoView({ block: "nearest", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+  try {
+    const url = await getChapterUrl(i);
+    if (token !== loadToken) { URL.revokeObjectURL(url); return; }
+    markCurrent();
+    const old = liveUrl;
+    silent = false; liveIndex = i; liveUrl = url;
+    pendingSeek = start > 0 ? start : null;
+    audio.src = url; audio.playbackRate = state.speed;
+    const p = audio.play(); if (p && p.catch) p.catch(() => setPlayingUI());
+    if (old) setTimeout(() => URL.revokeObjectURL(old), 1000);
+  } catch (e) {
+    if (token !== loadToken) return;
+    silent = false; try { audio.pause(); } catch (e2) {}
+    showErr(e.name === "OperationError" ? "Не удалось расшифровать главу. Попробуйте «Забыть пароль» и войти снова." : (e.message || "Не удалось открыть главу."));
+    markCurrent();
+  } finally { if (token === loadToken) setBusy(i, false); }
+}
+
+function togglePlay() {
+  if (state.current === null) { unlockAudio(); playChapter(0); return; }
+  if (liveIndex !== state.current) { unlockAudio(); playChapter(state.current); return; }
+  if (audio.paused) { const p = audio.play(); if (p && p.catch) p.catch(() => {}); }
+  else audio.pause();
+}
+
+audio.addEventListener("loadedmetadata", () => {
+  if (silent) return;
+  if (isFinite(audio.duration)) { seek.max = Math.floor(audio.duration); $("dur").textContent = fmt(audio.duration); }
+  if (pendingSeek !== null) { audio.currentTime = pendingSeek; pendingSeek = null; }
+  audio.playbackRate = state.speed;
+});
+let dragging = false, lastSave = 0;
+audio.addEventListener("timeupdate", () => {
+  if (silent || liveIndex === null) return;
+  if (!dragging) { seek.value = audio.currentTime; $("cur").textContent = fmt(audio.currentTime); paintSeek(); }
+  const now = Date.now();
+  if (now - lastSave > 3000) { lastSave = now; remember(); }
+});
+function remember() {
+  if (silent || liveIndex === null || pendingSeek !== null) return;
+  state.progress[CH[liveIndex].f] = audio.currentTime; saveState(); paintRow(liveIndex);
+}
+function setPlayingUI() {
+  const playing = !audio.paused && !silent;
+  $("icoPlay").style.display = playing ? "none" : ""; $("icoPause").style.display = playing ? "" : "none";
+  $("play").setAttribute("aria-label", playing ? "Пауза" : "Воспроизвести");
+  markCurrent();
+  if ("mediaSession" in navigator) navigator.mediaSession.playbackState = playing ? "playing" : "paused";
+}
+audio.addEventListener("play", () => { setPlayingUI(); if (!silent) setTimeout(prepareNext, 1500); });
+audio.addEventListener("pause", () => { remember(); setPlayingUI(); });
+audio.addEventListener("ended", () => {
+  if (silent) return;
+  const c = CH[liveIndex];
+  state.progress[c.f] = c.dur; saveState(); paintRow(liveIndex);
+  if (liveIndex < CH.length - 1) playChapter(liveIndex + 1, true);
+  else { setPlayingUI(); $("nowTitle").textContent = "Книга дослушана до конца"; }
+});
+audio.addEventListener("error", () => { if (!silent && liveUrl) showErr("Не удалось воспроизвести главу."); });
+
+function showErr(t) { $("err").textContent = t; $("err").hidden = false; }
+function hideErr() { $("err").hidden = true; }
+
+// ---------- перемотка ----------
+function paintSeek() { const max = +seek.max || 1; seek.style.setProperty("--p", (Math.min(1, seek.value / max) * 100) + "%"); }
+seek.addEventListener("input", () => { dragging = true; $("cur").textContent = fmt(seek.value); paintSeek(); });
+seek.addEventListener("change", () => {
+  dragging = false;
+  if (state.current === null) return;
+  if (liveIndex === state.current && !silent) { audio.currentTime = +seek.value; remember(); }
+  else { state.progress[CH[state.current].f] = +seek.value; saveState(); paintRow(state.current); }
+});
+function skip(sec) {
+  if (liveIndex === null || silent) return;
+  const d = isFinite(audio.duration) ? audio.duration : CH[liveIndex].dur;
+  audio.currentTime = Math.min(Math.max(0, audio.currentTime + sec), d - 0.5);
+}
+
+// ---------- кнопки ----------
+$("play").addEventListener("click", togglePlay);
+$("prev").addEventListener("click", () => { if (state.current > 0) { unlockAudio(); playChapter(state.current - 1, true); } });
+$("next").addEventListener("click", () => { if (state.current < CH.length - 1) { unlockAudio(); playChapter(state.current + 1, true); } });
+$("back").addEventListener("click", () => skip(-15));
+$("fwd").addEventListener("click", () => skip(30));
+function showSpeed() { $("speed").textContent = String(state.speed).replace(".", ",") + "×"; }
+$("speed").addEventListener("click", () => {
+  const i = SPEEDS.indexOf(state.speed);
+  state.speed = SPEEDS[(i + 1) % SPEEDS.length]; audio.playbackRate = state.speed; saveState(); showSpeed();
+});
+document.addEventListener("keydown", (e) => {
+  if (!KEY) return;
+  const tag = (e.target.tagName || "").toLowerCase();
+  if (e.metaKey || e.ctrlKey || e.altKey || tag === "input") return;
+  if (e.code === "Space" && tag !== "button") { e.preventDefault(); togglePlay(); }
+  if (e.key === "ArrowLeft") { e.preventDefault(); skip(-15); }
+  if (e.key === "ArrowRight") { e.preventDefault(); skip(15); }
+});
+
+// ---------- экран блокировки ----------
+function updateMediaSession() {
+  if (!("mediaSession" in navigator) || state.current === null) return;
+  try {
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: fullName(CH[state.current]), artist: BOOK.author, album: BOOK.title,
+      artwork: [{ src: "icon-512.png", sizes: "512x512", type: "image/png" }]
+    });
+  } catch (e) {}
+}
+if ("mediaSession" in navigator) {
+  const set = (a, f) => { try { navigator.mediaSession.setActionHandler(a, f); } catch (e) {} };
+  set("play", togglePlay); set("pause", togglePlay);
+  set("previoustrack", () => $("prev").click()); set("nexttrack", () => $("next").click());
+  set("seekbackward", () => skip(-15)); set("seekforward", () => skip(30));
+}
+
+// ---------- старт: пробуем сохранённый ключ ----------
+(async () => {
+  try {
+    const key = await kv("get", "key");
+    if (key) { await unlockWith(key); startApp(); return; }
+  } catch (e) {
+    if (/связи/.test(e.message || "")) { $("gateMsg").className = "msg bad"; $("gateMsg").textContent = e.message; }
+  }
+  $("gate").hidden = false;
+})();
+</script>
+
+<!-- Framer Motion (motion, локальная копия — работает офлайн): только микроанимации, видимость от него не зависит -->
+<script src="motion.js" defer></script>
+<script>
+window.addEventListener("load", () => {
+  const M = window.Motion;
+  if (!M || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const press = (el) => {
+    const up = () => M.animate(el, { scale: 1 }, { type: "spring", stiffness: 500, damping: 22 });
+    el.addEventListener("pointerdown", () => M.animate(el, { scale: 0.96 }, { duration: 0.12 }));
+    el.addEventListener("pointerup", up); el.addEventListener("pointerleave", up); el.addEventListener("pointercancel", up);
+  };
+  const wire = () => document.querySelectorAll(".btn, .pill, .ch").forEach((el) => { if (!el.dataset.m) { el.dataset.m = 1; press(el); } });
+  wire(); window.addEventListener("app-ready", wire);
+  const st = document.getElementById("sticker");
+  const wobble = () => M.animate(st, { rotate: [-6, 8, -10, 4, -6], scale: [1, 1.08, 1] }, { duration: 0.7 });
+  st.addEventListener("pointerenter", wobble); st.addEventListener("click", wobble);
+});
+</script>
+</body>
+</html>
