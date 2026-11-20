@@ -476,20 +476,43 @@ async function refreshCached() {
   CH.forEach((_, i) => paintRow(i));
   paintOffCard();
 }
+// Один кусок с защитой от «зависшей» связи: если 30 с не пришло ни байта —
+// обрываем и пробуем снова (до 5 попыток); байты неудачной попытки вычитаем из прогресса.
+async function fetchPart(u, onBytes, signal) {
+  for (let attempt = 1; ; attempt++) {
+    if (signal && signal.aborted) throw new DOMException("Остановлено", "AbortError");
+    const ctrl = new AbortController(), onOuter = () => ctrl.abort();
+    if (signal) signal.addEventListener("abort", onOuter, { once: true });
+    let timer = null;
+    const arm = () => { clearTimeout(timer); timer = setTimeout(() => ctrl.abort(), 30000); };
+    const chunks = []; let got = 0;
+    try {
+      arm();
+      const resp = await fetch(u, { cache: "no-store", signal: ctrl.signal });
+      if (!resp.ok) throw new Error("HTTP " + resp.status);
+      const reader = resp.body.getReader();
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        arm(); chunks.push(value); got += value.length; onBytes && onBytes(value.length);
+      }
+      return chunks;
+    } catch (e) {
+      if (got && onBytes) onBytes(-got);
+      if ((signal && signal.aborted) || attempt >= 5) throw e;
+      await new Promise((r) => setTimeout(r, 2000 * attempt));
+    } finally {
+      clearTimeout(timer);
+      if (signal) signal.removeEventListener("abort", onOuter);
+    }
+  }
+}
 async function fetchToCache(ch, onBytes, signal) {
   // большие главы лежат на сервере кусками по 10 МБ (ch.parts) — склеиваем обратно
   const urls = ch.parts && ch.parts.length ? ch.parts : [ch.f];
-  const parts = []; let got = 0;
-  for (const u of urls) {
-    const resp = await fetch(u, { cache: "no-store", signal });
-    if (!resp.ok) throw new Error("HTTP " + resp.status);
-    const reader = resp.body.getReader();
-    for (;;) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      parts.push(value); got += value.length; onBytes && onBytes(value.length);
-    }
-  }
+  const parts = [];
+  for (const u of urls) parts.push(...await fetchPart(u, onBytes, signal));
+  const got = parts.reduce((a, p) => a + p.length, 0);
   if (got !== ch.size) throw new Error("Файл скачался не полностью");
   const cache = await caches.open(AUDIO_CACHE);
   await cache.put(ch.f, new Response(new Blob(parts), { headers: { "Content-Type": "application/octet-stream" } }));
